@@ -11,12 +11,11 @@ struct MainScreen: View {
     var body: some View {
         NavigationView {
             VStack {
-                Text("Tic Tac Toe")
-                    .font(.title)
                 DifficultySelector(difficulty: Difficulty.easy)
                 DifficultySelector(difficulty: Difficulty.medium)
                 DifficultySelector(difficulty: Difficulty.hard)
             }
+            .navigationTitle("Tic Tac Toe")
         }
     }
 }
