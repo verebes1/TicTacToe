@@ -64,39 +64,20 @@ final class TicTacToeViewModel: ObservableObject {
     }
     
     func determineComputerMovePosition(in moves: [Move?]) -> Int {
-        let winPatterns: Set<Set<Int>> = [[0, 1, 2], [3, 4, 5], [6, 7, 8],
-                                          [0, 3, 6], [1, 4, 7], [2, 5, 8],
-                                          [0, 4, 8], [2, 4, 6]]
-        
         // Check if can win and take that position
         if difficulty == .hard {
-            let computerMoves = moves.compactMap{ $0 }.filter{ $0.player == .computer }
-            let computerPositions = Set(computerMoves.map{ $0.boardIndex })
-            for pattern in winPatterns {
-                let winPosition = pattern.subtracting(computerPositions)
-                if winPosition.count == 1 {
-                    let isAvailable = !isSquareOccupied(in: moves, forIndex: winPosition.first!)
-                    if isAvailable {
-                        return winPosition.first!
-                    }
-                }
+            if let winningMove = getWinningMove(for: .computer, in: moves) {
+                return winningMove
             }
         }
         
         // Check if can block and take that position
         if difficulty == .hard || difficulty == .medium {
-            let humanMoves = moves.compactMap{ $0 }.filter{ $0.player == .human }
-            let humanPositions = Set(humanMoves.map{ $0.boardIndex })
-            for pattern in winPatterns {
-                let blockPosition = pattern.subtracting(humanPositions)
-                if blockPosition.count == 1 {
-                    let isAvailable = !isSquareOccupied(in: moves, forIndex: blockPosition.first!)
-                    if isAvailable {
-                        return blockPosition.first!
-                    }
-                }
+            if let blockingMove = getWinningMove(for: .human, in: moves) {
+                return blockingMove
             }
         }
+        
         // Check if middle square is available and take it
         if difficulty == .hard || difficulty == .medium {
             let middleSquare = 4
@@ -113,6 +94,25 @@ final class TicTacToeViewModel: ObservableObject {
         }
         
         return movePosition
+    }
+    
+    func getWinningMove(for player: Player, in moves: [Move?]) -> Int? {
+        let winPatterns: Set<Set<Int>> = [[0, 1, 2], [3, 4, 5], [6, 7, 8],
+                                          [0, 3, 6], [1, 4, 7], [2, 5, 8],
+                                          [0, 4, 8], [2, 4, 6]]
+        
+        let playerMoves = moves.compactMap{ $0 }.filter{ $0.player == player }
+        let playerPositions = Set(playerMoves.map{ $0.boardIndex })
+        for pattern in winPatterns {
+            let winPosition = pattern.subtracting(playerPositions)
+            if winPosition.count == 1 {
+                let isAvailable = !isSquareOccupied(in: moves, forIndex: winPosition.first!)
+                if isAvailable {
+                    return winPosition.first!
+                }
+            }
+        }
+        return nil
     }
     
     func checkWinCondition(for player: Player, in moves: [Move?]) -> Bool {
@@ -137,5 +137,6 @@ final class TicTacToeViewModel: ObservableObject {
     
     func resetGame() {
         moves = Array(repeating: nil, count: 9)
+        boardDisabled = false
     }
 }
