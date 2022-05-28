@@ -15,11 +15,8 @@ struct GameView: View {
             VStack {
                 Text(difficulty())
                     .font(.title)
-                //            Spacer()
-                //            Spacer()
                 TicTacToeBoard(geometryProxy: geometry,
                                viewModel: TicTacToeViewModel(difficulty: difficulty))
-                //            Spacer()
             }
         }
     }

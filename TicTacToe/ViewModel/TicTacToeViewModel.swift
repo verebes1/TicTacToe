@@ -13,12 +13,17 @@ final class TicTacToeViewModel: ObservableObject {
                                GridItem(.flexible()),
     ]
     
+    private let winPatterns: Set<Set<Int>> = [[0, 1, 2], [3, 4, 5], [6, 7, 8],
+                                      [0, 3, 6], [1, 4, 7], [2, 5, 8],
+                                      [0, 4, 8], [2, 4, 6]]
+    
+    
     // Initialise it to nils as noone made a move initially, when player taps on a circle check if it is nil and only then allow to make a move.
     @Published var moves: [Move?] = Array(repeating: nil, count: 9)
     @Published var boardDisabled = false
     @Published var alertItem: AlertItem?
     
-    var difficulty: Difficulty
+    private var difficulty: Difficulty
     
     init(difficulty: Difficulty) {
         self.difficulty = difficulty
@@ -30,8 +35,25 @@ final class TicTacToeViewModel: ObservableObject {
         moves[position] = Move(player: .human, boardIndex: position)
         
         // check for win conditions
-        if checkWinCondition(for: .human, in: moves) {
-            alertItem = AlertContext.humanWin
+        checkAllWinConditions(for: .human)
+        
+        if moves.compactMap({ $0 }).count == 9 {
+            return
+        }
+        boardDisabled = true
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [self] in
+            let computerMoveIndex = determineComputerMovePosition(in: moves)
+            moves[computerMoveIndex] = Move(player: .computer, boardIndex: computerMoveIndex)
+            
+            checkAllWinConditions(for: .computer)
+            boardDisabled = false
+        }
+    }
+    
+    private func checkAllWinConditions(for player: Player) {
+        if checkWinCondition(for: player, in: moves) {
+            alertItem = player == .human ? AlertContext.humanWin : AlertContext.computerWin
             return
         }
         
@@ -39,31 +61,33 @@ final class TicTacToeViewModel: ObservableObject {
             alertItem = AlertContext.draw
             return
         }
-        
-        boardDisabled = true
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [self] in
-            let computerMoveIndex = determineComputerMovePosition(in: moves)
-            moves[computerMoveIndex] = Move(player: .computer, boardIndex: computerMoveIndex)
-            
-            boardDisabled = false
-            
-            if checkWinCondition(for: .computer, in: moves) {
-                alertItem = AlertContext.computerWin
-                return
-            }
-
-            if checkForDraw(in: moves) {
-                alertItem = AlertContext.draw
-            }
-        }
     }
     
-    func isSquareOccupied(in moves: [Move?], forIndex index: Int) -> Bool {
+    private func checkWinCondition(for player: Player, in moves: [Move?]) -> Bool {
+        let winPatterns: Set<Set<Int>> = [[0, 1, 2], [3, 4, 5], [6, 7, 8],
+                                          [0, 3, 6], [1, 4, 7], [2, 5, 8],
+                                          [0, 4, 8], [2, 4, 6]]
+        // Compact map gets rid of the nil values and filter only leaves elements that match passed in player
+        let playerMoves = moves.compactMap{ $0 }.filter{ $0.player == player }
+        // We map the boardindexes only from player moves and make a set out of it.
+        let playerPositions = Set(playerMoves.map{ $0.boardIndex })
+        
+        for pattern in winPatterns where pattern.isSubset(of: playerPositions) {
+            return true
+        }
+        
+        return false
+    }
+    
+    private func checkForDraw(in moves: [Move?]) -> Bool {
+        return moves.compactMap{ $0 }.count == 9
+    }
+    
+    private func isSquareOccupied(in moves: [Move?], forIndex index: Int) -> Bool {
         return moves[index] != nil
     }
     
-    func determineComputerMovePosition(in moves: [Move?]) -> Int {
+    private func determineComputerMovePosition(in moves: [Move?]) -> Int {
         // Check if can win and take that position
         if difficulty == .hard {
             if let winningMove = getWinningMove(for: .computer, in: moves) {
@@ -96,11 +120,7 @@ final class TicTacToeViewModel: ObservableObject {
         return movePosition
     }
     
-    func getWinningMove(for player: Player, in moves: [Move?]) -> Int? {
-        let winPatterns: Set<Set<Int>> = [[0, 1, 2], [3, 4, 5], [6, 7, 8],
-                                          [0, 3, 6], [1, 4, 7], [2, 5, 8],
-                                          [0, 4, 8], [2, 4, 6]]
-        
+    private func getWinningMove(for player: Player, in moves: [Move?]) -> Int? {
         let playerMoves = moves.compactMap{ $0 }.filter{ $0.player == player }
         let playerPositions = Set(playerMoves.map{ $0.boardIndex })
         for pattern in winPatterns {
@@ -113,26 +133,6 @@ final class TicTacToeViewModel: ObservableObject {
             }
         }
         return nil
-    }
-    
-    func checkWinCondition(for player: Player, in moves: [Move?]) -> Bool {
-        let winPatterns: Set<Set<Int>> = [[0, 1, 2], [3, 4, 5], [6, 7, 8],
-                                          [0, 3, 6], [1, 4, 7], [2, 5, 8],
-                                          [0, 4, 8], [2, 4, 6]]
-        // Compact map gets rid of the nil values and filter only leaves elements that match passed in player
-        let playerMoves = moves.compactMap{ $0 }.filter{ $0.player == player }
-        // We map the boardindexes only from player moves and make a set out of it.
-        let playerPositions = Set(playerMoves.map{ $0.boardIndex })
-        
-        for pattern in winPatterns where pattern.isSubset(of: playerPositions) {
-            return true
-        }
-        
-        return false
-    }
-    
-    func checkForDraw(in moves: [Move?]) -> Bool {
-        return moves.compactMap{ $0 }.count == 9
     }
     
     func resetGame() {
